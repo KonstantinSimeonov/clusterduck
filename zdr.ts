@@ -1,8 +1,4 @@
-type It<T> = {
-  next(): { done: true; value: undefined } | { done: false; value: T }
-}
-
-type Maybe<T> = Some<T> | None<T>
+export type Maybe<T> = Some<T> | None<T>
 
 class Some<T> implements PromiseLike<T> {
   constructor(private readonly v: T) {}
@@ -13,6 +9,10 @@ class Some<T> implements PromiseLike<T> {
     const r = fn(this.v)
     if (r instanceof Some || r instanceof None || r instanceof Promise) return r
     return new Some(r)
+  }
+
+  catch<R>(fn: () => R): Maybe<T> {
+    return this
   }
 
   unwrap(): T
@@ -27,12 +27,12 @@ class Some<T> implements PromiseLike<T> {
     return predicate(this.v) ? new Some(this.v) : new None<T>()
   }
 
-  itflat(): T extends Iterable<infer V> ? Iterator<V> : Iterator<never> {
-    return Symbol.iterator in Object(this.v)
-      ? this.v[Symbol.iterator]()
+  itflat(): T extends Iterable<infer V> ? Iterable<V> : Iterable<never> {
+    return (Symbol.iterator in Object(this.v)
+      ? this.v
       : {
-        next: () => ({ done: true, value: undefined })
-      }
+          *[Symbol.iterator]() {}
+        }) as any
   }
 
   toArray(): T[] {
@@ -43,17 +43,25 @@ class Some<T> implements PromiseLike<T> {
     return `Some(${this.v})` as any
   }
 
+  private get [Symbol.toStringTag]() {
+    return this.toString()
+  }
+
   *[Symbol.iterator]() {
     yield this.v
   }
 }
 
 class None<T> implements PromiseLike<T> {
-  // todo fix this promise dog shit
   then<R>(fn: (x: T) => Promise<R>): Promise<R>
   then<R>(fn: (x: T) => (R | Maybe<R>)): Maybe<R>
   then() {
     return this as any
+  }
+
+  catch<R>(fn: () => (R | Maybe<R>)): Maybe<R> {
+    const r = fn()
+    return (r instanceof Some || r instanceof None) ? r : new Some(r)
   }
 
   unwrap(): undefined
@@ -68,8 +76,8 @@ class None<T> implements PromiseLike<T> {
     return this as any
   }
 
-  itflat(): T extends Iterable<infer V> ? Iterator<V> : Iterator<never> {
-    return { next: () => ({ done: true, value: undefined }) } as any
+  innerIt(): T extends Iterable<infer V> ? Iterable<V> : Iterable<never> {
+    return { *[Symbol.iterator]() {} } as any
   }
 
   toArray(): T[] {
@@ -80,6 +88,10 @@ class None<T> implements PromiseLike<T> {
     return `None`
   }
 
+  private get [Symbol.toStringTag]() {
+    return this.toString()
+  }
+
   *[Symbol.iterator]() {}
 }
 
@@ -88,47 +100,30 @@ type MaybeFn = {
   <T>(x: T): Some<T>
 }
 
-const Maybe: MaybeFn = <T>(...args: [] | [T]): any =>
+export const Maybe: MaybeFn = <T>(...args: [] | [T]): any =>
   args.length === 0 ? new None<T>() : new Some(args[0])
 
-const isEmpty = <T>(x: T) =>
-  x === undefined
-    || x === null
-    || ((Array.isArray(x) || typeof x === `string`) && x.length === 0)
-    || (typeof x === `number` && Number.isNaN(x))
+const isNotEmpty = <T>(x: T | null | undefined | '' | []): x is T =>
+  x !== undefined
+    && x !== null
+    && ((!Array.isArray(x) && typeof x !== `string`) || x.length === 0)
+    && (typeof x !== `number` || Number.isNaN(x))
 
-const fromJS = <T>(x: T) => isEmpty(x) ? new Some(x): new None<T>()
+export const fromJS = <T>(x: T) => new Some(x).filter(isNotEmpty)
+
+const y = fromJS("asd" as string | undefined)
 
 type IsSomeFn = {
   (x: unknown): x is Some<unknown>
   <T>(x: Maybe<T>): x is Some<T>
 }
-const isSome: IsSomeFn = <T>(x: unknown): x is Some<T> => x instanceof Some
+export const isSome: IsSomeFn = <T>(x: unknown): x is Some<T> => x instanceof Some
 
-const somes = <T>(xs: readonly Maybe<T>[]): T[] => xs.filter(isSome).map(x => x.unwrap())
+export const somes = <T>(xs: readonly Maybe<T>[]): T[] => xs.filter(isSome).map(x => x.unwrap())
 
 type All<T> = T extends readonly [Maybe<infer X>, ...infer XS] ? [X, ...All<XS>] : []
 
-const all = <T extends readonly Maybe<unknown>[]>(...maybes: T): Maybe<All<T>> => {
+export const all = <T extends readonly Maybe<unknown>[]>(...maybes: T): Maybe<All<T>> => {
   const ms = maybes.filter(isSome)
   return ms.length === maybes.length ? Maybe(ms) : Maybe as any
 }
-
-const xs = all(Maybe(1), Maybe(`gosho`), Maybe(true))
-
-;(async () => {
-  console.log(await Promise.resolve('BAH TAQ NEDOKLATENA MONADA'))
-  const o = Maybe<number>().then(x => x + 3).then(x => Promise.resolve(x))
-  const x = await o
-  console.log(x)
-  //for (const x of Maybe()) {
-  //  console.log('HAHAHA')
-  //}
-  //const set = new Set(Maybe())
-  //console.log(set)
-  //const z = Maybe(5).filter(x => x > 0)
-  //const y = await Promise.resolve().then(
-  //  () => Maybe(10).then(x => Maybe(x + 3)).filter((x): x is 0 => x === 0).toString()
-  //)
-  //console.log(x, y)
-})()
