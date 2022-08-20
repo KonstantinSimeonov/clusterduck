@@ -7,7 +7,7 @@ console.log({ xs })
 
 console.log(String(Some(3)), String(None()))
 
-for (const x of Some(new Map<number, string | number>([[1, 2], [2, 'gosho']])).itflat()) {
+for (const x of Some(new Map<number, string | number>([[1, 2], [2, 'gosho']])).innerIt()) {
   console.log(x)
 }
 

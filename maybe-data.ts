@@ -27,7 +27,7 @@ export class Some<T> implements PromiseLike<T> {
     return predicate(this.v) ? new Some(this.v) : new None<T>()
   }
 
-  itflat(): T extends Iterable<infer V> ? Iterable<V> : Iterable<never> {
+  innerIt(): T extends Iterable<infer V> ? Iterable<V> : never {
     return (Symbol.iterator in Object(this.v)
       ? this.v
       : {
@@ -76,7 +76,7 @@ export class None<T> implements PromiseLike<T> {
     return this as any
   }
 
-  innerIt(): T extends Iterable<infer V> ? Iterable<V> : Iterable<never> {
+  innerIt(): T extends Iterable<infer V> ? Iterable<V> : never {
     return { *[Symbol.iterator]() {} } as any
   }
 
