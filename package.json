@@ -1,0 +1,19 @@
+{
+  "name": "zdr",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:KonstantinSimeonov/clusterduck.git",
+  "author": "Konstantin Simeonov <kon.simeonov@protonmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/jest": "^28.1.7",
+    "jest": "^28.1.3",
+    "ts-jest": "^28.0.8"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "typescript": "^4.7.4"
+  }
+}

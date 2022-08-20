@@ -11,12 +11,12 @@ export class Some<T> implements PromiseLike<T> {
     return new Some(r)
   }
 
-  catch<R>(fn: () => R): Maybe<T> {
+  catch<R>(fn: () => (R | Maybe<R>)): Maybe<T> {
     return this
   }
 
   unwrap(): T
-  unwrap(fallback: T): T
+  unwrap<F>(fallback: F): T | F
   unwrap(): T {
     return this.v
   }
@@ -65,8 +65,8 @@ export class None<T> implements PromiseLike<T> {
   }
 
   unwrap(): undefined
-  unwrap(fallback: T): T
-  unwrap(...args: [] | [T]): T | undefined {
+  unwrap<F>(fallback: F): T | F
+  unwrap<F>(...args: [] | [F]): T | F | undefined {
     if (args.length > 0) return args[0]
   }
 
