@@ -58,12 +58,12 @@ describe(`Maybe`, () => {
     expect(m.None<number>().then(() => 10).unwrap(15)).toEqual(15)
   })
 
-  it(`Can iterate inner iterable`, () => {
+  it(`can iterate inner iterable`, () => {
     const xs = [1, 2, 3]
     expect([...m.Some(xs).innerIt()]).toStrictEqual(xs)
   })
 
-  it(`Can refine values`, () => {
+  it(`can refine values`, () => {
     const v = m.Some(20).then(x => x + 1).filter((x): x is 21 => x === 21).unwrap(42 as const)
     const v1: 42 | 21 = v
 
@@ -73,12 +73,12 @@ describe(`Maybe`, () => {
     expect(v1).toEqual(21)
   })
 
-  it(`Failed filter returns None`, () => {
+  it(`failed filter returns None`, () => {
     const o = m.Some(10).filter(x => x > 100)
     expect(m.isSome(o)).toBeFalsy()
   })
 
-  it(`Can chain filters`, () => {
+  it(`can chain filters`, () => {
     const o = m.Some([1, 2]).filter(([a, b]) => a < b).filter(([a, b]) => a < 5 && b < 5)
 
     expect(o.unwrap()).toStrictEqual([1, 2])
@@ -86,7 +86,7 @@ describe(`Maybe`, () => {
     expect(m.isSome(o.filter(() => false))).toBeFalsy()
   })
 
-  it(`Can recover with catch`, () => {
+  it(`can recover with catch`, () => {
     const v = m.None<{ age: number; name: string }>()
       .catch(() => ({ age: 28, name: `Pilav` }))
       .then(pilav => ({ ...pilav, age: 29 }))
@@ -121,5 +121,41 @@ describe(`Maybe`, () => {
       })(),
       sleep(200)
     ])
+  })
+
+  it(`all returns a master Maybe`, () => {
+    const xs = m.all(m.Some(5), m.Some(`kekw`), m.Some(true))
+    expect(xs.unwrap()).toEqual([5, `kekw`, true])
+  })
+
+  it(`all returns None if one is None`, () => {
+    const xs = m.all(m.Some(5), m.Some(`kekw`), m.None(), m.Some(true))
+    expect(m.isSome(xs)).toBeFalsy()
+  })
+
+  it(`all works for wide type arrays`, () => {
+    const xs: m.Maybe<number[]> = m.all(...[m.Some(5), m.Some(3)])
+    expect(xs.unwrap()).toStrictEqual([5, 3])
+  })
+
+  it(`somes filters out Nones`, () => {
+    const v = m.somes([
+      m.Some(1),
+      m.None<number>(),
+      m.Some(3),
+      m.None<number>(),
+      m.None<number>()
+    ])
+
+    expect(v).toStrictEqual([1, 3])
+  })
+
+  it(`isSome works`, () => {
+    expect(m.isSome(m.Some(3))).toBeTruthy()
+    expect(m.isSome(m.None<number>())).toBeFalsy()
+  })
+
+  it.each([null, undefined, '', [], NaN])(`fromJS returns None for %s`, (value: unknown) => {
+    expect(m.isSome(m.fromJS(value))).toBeFalsy()
   })
 })
